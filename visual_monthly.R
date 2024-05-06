@@ -8,7 +8,8 @@ library(leaps)
 theme_set(theme_bw())
 theme_update(panel.grid = element_blank())
 
-df_gen <- readRDS("df_gen.RDS") |> filter(!site_eng=="\\Ytteborg\\")
+df_gen <- readRDS(
+  "O:/Tech_AGRO/Jornaer/Franca/N_conc/Nudvask/Nret24files/df_m_imp.RDS")
 
 # sites and years ----
 
@@ -107,5 +108,101 @@ table(df_gen$Main_nles5,df_gen$Winter_nles5) |>
         axis.text.y = element_text( vjust = 0.2, hjust = 1.02),
         legend.position = "none")
 
+# Figure 1 ----
 ggarrange(site_yr_plot,ggarrange(crops_plot,hist_conc,  widths = c(2, 1)), 
           nrow = 2)
+
+# monthly example ----
+df_gen_plot_month <- df_gen |>
+  mutate(
+    month_hy =
+      fct_relevel(
+        as.character(month),
+        '4','5','6','7','8','9','10','11','12','1','2','3'),
+    month_name = month.abb[month],
+    clay_plot = fct_recode(
+           clay_cat,
+           low = "low",
+           'midle-high' = "middle",
+           'midle-high' = "high"
+         )
+  ) |>
+    filter(site_eng=="\\Foulum\\" &
+    Main_nles5 == "1" #winter ceral
+    & Winter_nles5 %in% c("2", "4") #bare soil and Cover crops
+    #& N_mineral_spring>50
+    ) |> 
+  mutate(Winter_nles5=dplyr::recode_factor(Winter_nles5,
+                                        '2' = 'Bare soil', 
+                                        '4'= 'Cover crops') )
+
+conc_month <- df_gen_plot_month |> 
+  ggplot(aes(x=reorder(month_name,month),y=meancon))+
+  geom_point(color="#01a2d9", size=0.9)+
+  geom_smooth(aes(group = clay_plot),color="#01a2d9", alpha=0.2
+              )+
+  facet_grid(~Winter_nles5)+
+  scale_y_continuous(name = "Monthly nitrate conccentration (mg/L)")+
+  scale_x_discrete(name = "")
+
+
+perc_month <- df_gen_plot_month |>
+  ggplot(aes(x=reorder(month_name,month),y=as.numeric(afstro_sum_month)))+
+  geom_point(color="#014d64", size=0.9)+
+  geom_smooth(aes(group = clay_plot),color="#014d64", alpha=0.2
+              )+
+  scale_y_continuous(name="Monthly percolation (mm)")+
+  facet_grid(~Winter_nles5)+
+  scale_x_discrete(name = "")
+
+leached_month <- df_gen_plot_month |>
+  ggplot(aes(x=reorder(month_name,month),y=as.numeric(meancon*afstro_sum_month/100)))+
+  geom_point(color="#7e0021", size=0.9)+
+  geom_smooth(aes(group = Winter_nles5),color="#7e0021", alpha=0.2)+
+  scale_y_continuous(name="Monthly nitrate leaching Kg/ha")+
+  facet_grid(~Winter_nles5)+
+  scale_x_discrete(name = "month")
+
+
+ggarrange(conc_month+rremove("x.text"), perc_month+rremove("x.text"), leached_month, ncol=1)+
+  scale_x_discrete(name = "month") #|> 
+
+library(plotly)
+ggplotly(conc_month)
+
+
+# map ----
+library(sf)
+#install.packages("plotDK")
+library(plotDK)
+
+region_dk <- st_as_sf(plotDK::region, coords = c("long","lat")) |> 
+  group_by(id) |> 
+  summarise() |> 
+  st_cast("POLYGON")
+
+ggplot(province_dk) +
+  geom_sf()
+
+plotDK()
+
+# read sf file
+dk <- read_rds("gadm36_DNK_2_sf.rds")
+
+df_gen_sf <- df_gen  |> 
+  st_as_sf(coords = c("X", "Y"), crs = 25832) |> 
+  group_by(site_eng)
+
+dk <- st_transform(dk,crs=st_crs(df_gen_sf))
+
+ggplot(dk)+
+  geom_sf( color="#b0b0b0") +
+  geom_point(data=df_gen, aes(x=X,y=Y
+                              #, col = site_eng
+                              ))+
+  labs(x="Longitude",y= "Latitude")
+  
+# plot
+ggplot(data = dk) +
+  geom_sf(dk, aes(fill = NAME_0))+
+  geom_point(data = df_gen, aes(x=X, y=Y) ) 
