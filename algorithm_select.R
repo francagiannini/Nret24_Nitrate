@@ -105,7 +105,7 @@ df_gen <-
 remove(df_m_imp)
 # Parallel 
 
-registerDoParallel(makeCluster(detectCores()-4))
+#registerDoParallel(makeCluster(detectCores()-4))
 
 # random forest simplifying ----
 
@@ -119,48 +119,48 @@ df_gen_full <- df_gen_full[complete.cases(df_gen_full),] |>
   filter(!Winter_nles5==7)
 
 # train model
-fitControl <- trainControl(
-  ## 10-fold CV
-  method = "repeatedcv",
-  number = 5,
-  ## repeated ten times
-  repeats = 2)
-
-#create tunegrid
-tunegrid <- expand.grid(.mtry = seq(30,39,3)
-)
-
-#train with different
-modellist <- list()
-
-for (ntree in c(1000, 1500, 2000, 2500)) {
-  rffit_full <- caret::train(
-    log(meancon) ~ .,#month+ WC +N_mineral_spring+ N_min_year.1 +N_min_year.2 +N_f_year,
-    data = df_gen_full,
-    method = 'rf',
-    #preProc = c("center", "scale"),
-    tuneGrid = tunegrid,
-    metric = 'RMSE',
-    ntree = ntree,
-    trControl = fitControl,
-    verbose = FALSE,
-    trace = FALSE)
-  key <- toString(ntree)
-  modellist[[key]] <- rffit_full
-}
-
-
-#Compare results
-
-summary(resamples(modellist))
-
-plot(modellist$'2000')
-
-modellist$'2000'$results[rownames(modellist$'2000'$bestTune),]$RMSE/mean(log(df_gen_full$meancon))* 100
-
-sqrt(mean((modellist$'2000'$finalModel$predicted-log(df_gen$meancon))^2))/mean(log(df_gen$meancon))* 100
-
-saveRDS(modellist,"rffit_full.RDS")
+# fitControl <- trainControl(
+#   ## 10-fold CV
+#   method = "repeatedcv",
+#   number = 5,
+#   ## repeated ten times
+#   repeats = 2)
+# 
+# #create tunegrid
+# tunegrid <- expand.grid(.mtry = seq(30,39,3)
+# )
+# 
+# #train with different
+# modellist <- list()
+# 
+# for (ntree in c(1000, 1500, 2000, 2500)) {
+#   rffit_full <- caret::train(
+#     log(meancon) ~ .,#month+ WC +N_mineral_spring+ N_min_year.1 +N_min_year.2 +N_f_year,
+#     data = df_gen_full,
+#     method = 'rf',
+#     #preProc = c("center", "scale"),
+#     tuneGrid = tunegrid,
+#     metric = 'RMSE',
+#     ntree = ntree,
+#     trControl = fitControl,
+#     verbose = FALSE,
+#     trace = FALSE)
+#   key <- toString(ntree)
+#   modellist[[key]] <- rffit_full
+# }
+# 
+# 
+# #Compare results
+# 
+# summary(resamples(modellist))
+# 
+# plot(modellist$'2000')
+# 
+# modellist$'2000'$results[rownames(modellist$'2000'$bestTune),]$RMSE/mean(log(df_gen_full$meancon))* 100
+# 
+# sqrt(mean((modellist$'2000'$finalModel$predicted-log(df_gen$meancon))^2))/mean(log(df_gen$meancon))* 100
+# 
+# saveRDS(modellist,"rffit_full.RDS")
 
 modellist <- readRDS("rffit_full.RDS")
 
@@ -175,72 +175,72 @@ df_gen_full_ind <- df_gen_full_ind[complete.cases(df_gen_full_ind),] |>
   ##sample_frac(0.2) |> 
   filter(!Winter_nles5==7)
 
-tunegrid <- expand.grid(.mtry = seq(30,36,3))
-
-modellist_ind <- list()
-
-for (ntree in c(1000, 1500, 2000, 2500)) {
-  rffit_full_ind <- caret::train(
-    log(meancon) ~ .,#month+ WC +N_mineral_spring+ N_min_year.1 +N_min_year.2 +N_f_year,
-    data = df_gen_full_ind,
-    method = 'rf',
-    #preProc = c("center", "scale"),
-    tuneGrid = tunegrid,
-    metric = 'RMSE',
-    ntree = ntree,
-    trControl = fitControl,
-    verbose = FALSE,
-    trace = FALSE)
-  key <- toString(ntree)
-  modellist[[key]] <- rffit_full_ind
-}
-
-
-saveRDS(modellist_ind,"rffit_full_ind.RDS")
+# tunegrid <- expand.grid(.mtry = seq(30,36,3))
+# 
+# modellist_ind <- list()
+# 
+# for (ntree in c(1000, 1500, 2000, 2500)) {
+#   rffit_full_ind <- caret::train(
+#     log(meancon) ~ .,#month+ WC +N_mineral_spring+ N_min_year.1 +N_min_year.2 +N_f_year,
+#     data = df_gen_full_ind,
+#     method = 'rf',
+#     #preProc = c("center", "scale"),
+#     tuneGrid = tunegrid,
+#     metric = 'RMSE',
+#     ntree = ntree,
+#     trControl = fitControl,
+#     verbose = FALSE,
+#     trace = FALSE)
+#   key <- toString(ntree)
+#   modellist[[key]] <- rffit_full_ind
+# }
+# 
+# 
+# saveRDS(modellist_ind,"rffit_full_ind.RDS")
 
 modellist_ind <- readRDS("rffit_full_ind.RDS")
 
 ## simplified ----
 
-df_gen_simp <- df_gen |> 
-  select(!c(site_eng, harvest_year,
-            #afstro_sum_month,afstro_cumsumhy,afstro_sumhy,
-            "N_min_year.1","N_min_year.2","N_f_year.1","N_f_year.2",
-            "N_org_year","N_org_year.1","N_org_year.2",
-            "prev_Main_nles5","prev_Winter_nles5",
-            "tvspp_month","drain_days",
-            "Precip_sum60","Precip_sum90","Precip_sum180",
-            "AirTemp_ave60","AirTemp_ave90","AirTemp_ave180",
-            "tvspp_60","tvspp_90","season","N_f_year" 
-            
-  )) |>
-  drop_na()
-
-df_gen_simp <- df_gen_simp[complete.cases(df_gen_simp),] |>  
-  ##sample_frac(0.2) |> 
-  filter(!Winter_nles5==7)
-
-tunegrid <- expand.grid(.mtry = seq(6,18,4))
-
-modellist_sim <- list()
-
-for (ntree in c(1500, 2000, 2500, 5000)) {
-  rffit_sim <- caret::train(
-    log(meancon) ~ .,#month+ WC +N_mineral_spring+ N_min_year.1 +N_min_year.2 +N_f_year,
-    data = df_gen_simp,
-    method = 'rf',
-    #preProc = c("center", "scale"),
-    tuneGrid = tunegrid,
-    metric = 'RMSE',
-    ntree = ntree,
-    trControl = fitControl,
-    verbose = FALSE,
-    trace = FALSE)
-  key <- toString(ntree)
-  modellist_sim[[key]] <- rffit_sim
-}
-
-saveRDS(modellist_sim,"rffit_sim.RDS")
+# df_gen_simp <- df_gen |> 
+#   select(!c(site_eng, harvest_year,
+#             #afstro_sum_month,afstro_cumsumhy,afstro_sumhy,
+#             "N_min_year.1","N_min_year.2","N_f_year.1","N_f_year.2",
+#             "N_org_year","N_org_year.1","N_org_year.2",
+#             "prev_Main_nles5","prev_Winter_nles5",
+#             "tvspp_month","drain_days",
+#             "Precip_sum60","Precip_sum90","Precip_sum180",
+#             "AirTemp_ave60","AirTemp_ave90","AirTemp_ave180",
+#             "tvspp_60","tvspp_90","season","N_f_year" 
+#             
+#   )) |>
+#   drop_na()
+# 
+# df_gen_simp <- df_gen_simp[complete.cases(df_gen_simp),] |>  
+#   ##sample_frac(0.2) |> 
+#   filter(!Winter_nles5==7)
+# 
+# tunegrid <- expand.grid(.mtry = seq(6,18,4))
+# 
+# modellist_sim <- list()
+# 
+# for (ntree in c(1500, 2000, 2500, 5000)) {
+#   rffit_sim <- caret::train(
+#     log(meancon) ~ .,#month+ WC +N_mineral_spring+ N_min_year.1 +N_min_year.2 +N_f_year,
+#     data = df_gen_simp,
+#     method = 'rf',
+#     #preProc = c("center", "scale"),
+#     tuneGrid = tunegrid,
+#     metric = 'RMSE',
+#     ntree = ntree,
+#     trControl = fitControl,
+#     verbose = FALSE,
+#     trace = FALSE)
+#   key <- toString(ntree)
+#   modellist_sim[[key]] <- rffit_sim
+# }
+# 
+# saveRDS(modellist_sim,"rffit_sim.RDS")
 
 modellist_sim <- readRDS("rffit_sim.RDS")
 
@@ -267,34 +267,34 @@ df_gen_simp_ind <- droplevels(df_gen_simp_ind[complete.cases(df_gen_simp_ind),] 
   ##sample_frac(0.2) |> 
   filter(!Winter_nles5==7)
 
-fitControl <- trainControl(
-  ## 10-fold CV
-  method = "repeatedcv",
-  number = 5,
-  ## repeated ten times
-  repeats = 2)
-
-tunegrid <- expand.grid(.mtry = seq(6,15,3))
-
-modellist_sim_ind <- list()
-
-for (ntree in c(1500, 2000, 2500, 5000)) {
-  rffit_sim_ind <- caret::train(
-    log(meancon) ~ .,#month+ WC +N_mineral_spring+ N_min_year.1 +N_min_year.2 +N_f_year,
-    data = df_gen_simp_ind,
-    method = 'rf',
-    #preProc = c("center", "scale"),
-    tuneGrid = tunegrid,
-    metric = 'RMSE',
-    ntree = ntree,
-    trControl = fitControl,
-    verbose = FALSE,
-    trace = FALSE)
-  key <- toString(ntree)
-  modellist_sim_ind[[key]] <- rffit_sim_ind
-}
-
-saveRDS(modellist_sim_ind,"rffit_sim_ind.RDS")
+# fitControl <- trainControl(
+#   ## 10-fold CV
+#   method = "repeatedcv",
+#   number = 5,
+#   ## repeated ten times
+#   repeats = 2)
+# 
+# tunegrid <- expand.grid(.mtry = seq(6,15,3))
+# 
+# modellist_sim_ind <- list()
+# 
+# for (ntree in c(1500, 2000, 2500, 5000)) {
+#   rffit_sim_ind <- caret::train(
+#     log(meancon) ~ .,#month+ WC +N_mineral_spring+ N_min_year.1 +N_min_year.2 +N_f_year,
+#     data = df_gen_simp_ind,
+#     method = 'rf',
+#     #preProc = c("center", "scale"),
+#     tuneGrid = tunegrid,
+#     metric = 'RMSE',
+#     ntree = ntree,
+#     trControl = fitControl,
+#     verbose = FALSE,
+#     trace = FALSE)
+#   key <- toString(ntree)
+#   modellist_sim_ind[[key]] <- rffit_sim_ind
+# }
+# 
+# saveRDS(modellist_sim_ind,"rffit_sim_ind.RDS")
 
 modellist_sim_ind <- readRDS("rffit_sim_ind.RDS")
 
@@ -303,7 +303,7 @@ summary(res)
 
 ## simplified independent max reduced----
 
-df_gen_simp_ind_max <- df_gen |> 
+df_gen_simp_ind_max <- df_gen |>
   select(!c(site_eng, harvest_year,
             afstro_sum_month,afstro_cumsumhy,afstro_sumhy,
             "N_min_year.1","N_min_year.2","N_f_year.1","N_f_year.2",
@@ -315,43 +315,43 @@ df_gen_simp_ind_max <- df_gen |>
             "tvspp_60","tvspp_90","season","N_f_year","Globrad_ave_month",
             "Precip_sumhy", "Precip_sum365","AirTemp_avehy", "Precip_sum_month",
             "WC","Globrad_avehy"
-            
-            
+
+
   )) |>
   drop_na()
 
-df_gen_simp_ind_max <- droplevels(df_gen_simp_ind_max[complete.cases(df_gen_simp_ind_max),]) |>  
-  ##sample_frac(0.2) |> 
+df_gen_simp_ind_max <- droplevels(df_gen_simp_ind_max[complete.cases(df_gen_simp_ind_max),]) |>
+  ##sample_frac(0.2) |>
   filter(!Winter_nles5==7)
-
-fitControl <- trainControl(
-  ## 10-fold CV
-  method = "repeatedcv",
-  number = 10,
-  ## repeated ten times
-  repeats = 2)
-
-tunegrid <- expand.grid(.mtry = seq(1,6,1))
-
-modellist_sim_ind_max <- list()
-
-for (ntree in c(500, 1000, 3000, 6000)) {
-  rffit_sim_ind_max <- caret::train(
-    log(meancon) ~ .,
-    data = df_gen_simp_ind_max,
-    method = 'rf',
-    #preProc = c("center", "scale"),
-    tuneGrid = tunegrid,
-    metric = 'RMSE',
-    ntree = ntree,
-    trControl = fitControl,
-    verbose = FALSE,
-    trace = FALSE)
-  key <- toString(ntree)
-  modellist_sim_ind_max[[key]] <- rffit_sim_ind_max
-}
-
-saveRDS(modellist_sim_ind_max,"rffit_sim_ind_max.RDS")
+# 
+# fitControl <- trainControl(
+#   ## 10-fold CV
+#   method = "repeatedcv",
+#   number = 10,
+#   ## repeated ten times
+#   repeats = 2)
+# 
+# tunegrid <- expand.grid(.mtry = seq(1,6,1))
+# 
+# modellist_sim_ind_max <- list()
+# 
+# for (ntree in c(500, 1000, 3000, 6000)) {
+#   rffit_sim_ind_max <- caret::train(
+#     log(meancon) ~ .,
+#     data = df_gen_simp_ind_max,
+#     method = 'rf',
+#     #preProc = c("center", "scale"),
+#     tuneGrid = tunegrid,
+#     metric = 'RMSE',
+#     ntree = ntree,
+#     trControl = fitControl,
+#     verbose = FALSE,
+#     trace = FALSE)
+#   key <- toString(ntree)
+#   modellist_sim_ind_max[[key]] <- rffit_sim_ind_max
+# }
+# 
+# saveRDS(modellist_sim_ind_max,"rffit_sim_ind_max.RDS")
 
 modellist_sim_ind_max <- readRDS("rffit_sim_ind_max.RDS")
 
@@ -436,54 +436,52 @@ fixed_effect_coeff <- cbind("coefficient"=fixef(linear_translate_ind),
                             "covariable"=names(fixef(linear_translate_ind))) |> 
   as.data.frame()
 
-write.table(fixed_effect_coeff,"fixed_effect_coeff.txt", sep="\t")
+#write.table(fixed_effect_coeff,"fixed_effect_coeff.txt", sep="\t")
 
 #df_gen$lin_pred_simp <- exp(predict(linear_translate_simp, df_gen))
 
-
-
 # GBM opt sim ind -----
 
-param_gbm <-  expand.grid(
-  interaction.depth = seq(10,16,3),#c(10,12,14),
-  n.trees = seq(110000,220000,32000),
-  shrinkage = c(0.1,0.0001),
-  n.minobsinnode = seq(5,20,15)
-)
-
-#detectCores()
-#Timedf = data.frame(time="")
-#stime = data.frame(stime)
-
-
-control <- trainControl(method ="repeatedcv", #"cv",
-                        number = 5,
-                        repeats = 2,
-                        allowParallel = TRUE
-                        #savePredictions = "all"
-)
-
-#remotes::install_github("gbm-developers/gbm")
-
-#gbm_raw <- gbm(meancon ~ ., data =df_gen_simp_ind, distribution="tdist")
-
-
-# gbm()
-
-fitt_gbm_non_gamma_bis <- caret::train(
-  log(meancon) ~ .,
-  data =df_gen_simp_ind,
-  method = "gbm",
-  trControl = control,
-  #verbose = FALSE,
-  distribution = "gaussian",
-  tuneGrid = param_gbm
-  
-)
-
-plot(fitt_gbm_non_gamma_bis)
-
-saveRDS(fitt_gbm_non_gamma,"fitt_gbm_none_gamma.RDS")
+# param_gbm <-  expand.grid(
+#   interaction.depth = seq(10,16,3),#c(10,12,14),
+#   n.trees = seq(110000,220000,32000),
+#   shrinkage = c(0.1,0.0001),
+#   n.minobsinnode = seq(5,20,15)
+# )
+# 
+# #detectCores()
+# #Timedf = data.frame(time="")
+# #stime = data.frame(stime)
+# 
+# 
+# control <- trainControl(method ="repeatedcv", #"cv",
+#                         number = 5,
+#                         repeats = 2,
+#                         allowParallel = TRUE
+#                         #savePredictions = "all"
+# )
+# 
+# #remotes::install_github("gbm-developers/gbm")
+# 
+# #gbm_raw <- gbm(meancon ~ ., data =df_gen_simp_ind, distribution="tdist")
+# 
+# 
+# # gbm()
+# 
+# fitt_gbm_non_gamma_bis <- caret::train(
+#   log(meancon) ~ .,
+#   data =df_gen_simp_ind,
+#   method = "gbm",
+#   trControl = control,
+#   #verbose = FALSE,
+#   distribution = "gaussian",
+#   tuneGrid = param_gbm
+#   
+# )
+# 
+# plot(fitt_gbm_non_gamma_bis)
+# 
+# saveRDS(fitt_gbm_non_gamma,"fitt_gbm_none_gamma.RDS")
 
 fitt_gbm_non_gamma <- readRDS("fitt_gbm_none_gamma.RDS")
 
@@ -494,26 +492,32 @@ sqrt(mean((fitt_gbm_non_gamma$finalModel$fit-log(df_gen$meancon))^2))/mean(log(d
 plot((fitt_gbm_non_gamma$finalModel$shrinkage))
 
 # xgb gradient ----
+# 
+# param_grid_xgb_max <- expand.grid(
+#   nrounds = c(500,750,1000),#seq(100, 1000, 300),          # Number of boosting rounds
+#   max_depth = c(5, 10),              # Maximum depth of trees
+#   eta = c(0.01, 0.1, 0.3),             # Learning rate
+#   gamma = c(0.1, 0.2, 0.3),                           # Regularization parameter
+#   colsample_bytree = c(0.5, 0.9), # Fraction of features to use in each tree
+#   subsample= c(0.5, 0.9),
+#   min_child_weight=c(5,20)
+# )
+# 
+# fitt_xgb_max <- caret::train(
+#   log(meancon) ~ .,
+#   data = df_gen_simp_ind_max,
+#   preProc = c("center", "scale"),
+#   method = "xgbTree",
+#   trControl = trainControl(method="cv", number=5, returnResamp = "all"),
+#   tuneGrid = param_grid_xgb_max,
+#   verbose = FALSE
+# )
 
-param_grid_xgb_max <- expand.grid(
-  nrounds = c(500,750,1000),#seq(100, 1000, 300),          # Number of boosting rounds
-  max_depth = c(5, 10),              # Maximum depth of trees
-  eta = c(0.01, 0.1, 0.3),             # Learning rate
-  gamma = c(0.1, 0.2, 0.3),                           # Regularization parameter
-  colsample_bytree = c(0.5, 0.9), # Fraction of features to use in each tree
-  subsample= c(0.5, 0.9),
-  min_child_weight=c(5,20)
-)
+#saveRDS(fitt_xgb_max, "fitt_xgb_max.RDS"
 
-fitt_xgb_max <- caret::train(
-  log(meancon) ~ .,
-  data = df_gen_simp_ind_max,
-  preProc = c("center", "scale"),
-  method = "xgbTree",
-  trControl = trainControl(method="cv", number=5, returnResamp = "all"),
-  tuneGrid = param_grid_xgb_max,
-  verbose = FALSE
-)
+fitt_xgb <- readRDS("fitt_xgb.RDS")
+
+fitt_xgb_max <- readRDS("fitt_xgb_max.RDS")
 
 summary(fitt_xgb_max)
 
@@ -534,63 +538,61 @@ importance <-
   arrange(-Contribution)
 
 importance |> ggplot(aes(x=reorder(Predictor, Contribution), y=Contribution))+
-  geom_col(width=0.3)+coord_flip()+theme_hc()+
+  geom_col(width=0.3)+coord_flip()+#theme_hc()+
   labs(x='Predictors',
        y="Contribution (%)")
 
 sample_frac(df_gen_simp_ind_max, 0.1) |> 
-  ggpairs(colors='clay_cat') +theme_clean()
+  ggpairs(colors='clay_cat') #+theme_clean()
 
-
-saveRDS(fitt_xgb_max, "fitt_xgb_max.RDS")
 
 sqrt(mean((predict(fitt_xgb_max,df_gen)-log(df_gen$meancon))^2))/mean(log(df_gen$meancon))* 100
 
 
-library(pdp)
-
-variables <-c("N_mineral_spring","Main_nles5","Winter_nles5",
-              "AirTemp_ave_month","Precip_cumsumhy")
-
-pdp_func <- function(i) {
-  
-  m_c_plot <- 
-    partial(fitt_xgb_max, 
-            pred.var = c(print(i),"clay_cat"), 
-            train = droplevels(sample_frac(df_gen,0.2)),
-            chull = TRUE)
-  
-}
-
-list_xgb_sim_ind_max_partial <- lapply(variables, pdp_func)
-
-
-pdp_Precip_cumsumhy<- 
-  list_xgb_sim_ind_max_partial[[6]] |> 
-  ggplot(aes(x=Precip_cumsumhy, 
-             y=exp(yhat),
-             col=clay_cat,
-             fill=clay_cat))+
-  #scale_x_continuous(breaks = seq(1,12,1))+
-  #scale_colour_solarized('red')+
-  scale_color_stata()+
-  scale_fill_stata()+
-  #geom_col(position = "dodge")+
-  geom_line()+
-  geom_smooth(alpha=0.1)+
-  theme_hc()
-
-
-ggarrange(pdp_AirTemp_ave_month,
-          pdp_Precip_cumsumhy,
-          pdp_N_mineral_spring, 
-          pdp_month, 
-          
-          pdp_Main_nles5,
-          pdp_Winter_nles5,
-          
-          ncol=2, nrow=3, #, 
-          common.legend = T,  legend="bottom")
+# library(pdp)
+# 
+# variables <-c("N_mineral_spring","Main_nles5","Winter_nles5",
+#               "AirTemp_ave_month","Precip_cumsumhy")
+# 
+# pdp_func <- function(i) {
+#   
+#   m_c_plot <- 
+#     partial(fitt_xgb_max, 
+#             pred.var = c(print(i),"clay_cat"), 
+#             train = droplevels(sample_frac(df_gen,0.2)),
+#             chull = TRUE)
+#   
+# }
+# 
+# list_xgb_sim_ind_max_partial <- lapply(variables, pdp_func)
+# 
+# 
+# pdp_Precip_cumsumhy<- 
+#   list_xgb_sim_ind_max_partial[[3]] |> 
+#   ggplot(aes(x=Precip_cumsumhy, 
+#              y=exp(yhat),
+#              col=clay_cat,
+#              fill=clay_cat))+
+#   #scale_x_continuous(breaks = seq(1,12,1))+
+#   #scale_colour_solarized('red')+
+#   #scale_color_stata()+
+#   #scale_fill_stata()+
+#   #geom_col(position = "dodge")+
+#   geom_line()+
+#   geom_smooth(alpha=0.1)#+
+#   #theme_hc()
+# 
+# 
+# ggarrange(pdp_AirTemp_ave_month,
+#           pdp_Precip_cumsumhy,
+#           pdp_N_mineral_spring, 
+#           pdp_month, 
+#           
+#           pdp_Main_nles5,
+#           pdp_Winter_nles5,
+#           
+#           ncol=2, nrow=3, #, 
+#           common.legend = T,  legend="bottom")
 
 
 
@@ -627,6 +629,8 @@ df_gen_pred <- cbind(df_gen,
     leach_lin=pred_lin*afstro_sum_month/100,
     leach_lin_ind=pred_lin_ind*afstro_sum_month/100)
 
+saveRDS(df_gen_pred,"df_gen_predjun24.RDS")
+
 testRes  <-  df_gen_pred |> select(starts_with("leach_")) |> corrplot::cor.mtest(conf.level = 0.95)
 
 df_gen_pred |> select(starts_with("leach_")) |> cor() |>
@@ -637,7 +641,11 @@ df_gen_pred |> select(starts_with("leach_")) |> cor() |>
                       #col=gray.colors(100),
                       order = 'AOE', diag = FALSE)
 
-saveRDS(df_gen, "df_gen0610.RDS")
+# Starting BIS whith alogarithms #####
+
+
+
+df_gen_pred <- readRDS("df_gen_predjun24")
 
 df_gen_pred |>
   mutate(clay_plot = fct_recode(
@@ -765,7 +773,7 @@ cont |>
 
 df_gen_simp_ind_max |>  
   ggplot(aes(x = N_mineral_spring )) +
-  #geom_density(stat="density", position="identity", alpha=0.1)+
+  geom_density(stat="density", position="identity", alpha=0.1)+
   geom_step(aes(y = ..y..), stat = "ecdf")+
   theme_hc()
 
