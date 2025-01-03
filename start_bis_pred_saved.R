@@ -1,3 +1,5 @@
+library(tidyverse)
+library(ggthemes)
 # Starting BIS whith alogarithms #####
 
 df_gen_pred <- readRDS("df_gen_predjun24.RDS")
@@ -53,7 +55,7 @@ df_gen_pred |>
 
 
 
-log_den<- df_gen_pred |>
+log_den <- df_gen_pred |>
   pivot_longer(
     cols = c(
       leach_a_obs,

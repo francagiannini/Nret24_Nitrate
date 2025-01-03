@@ -375,6 +375,7 @@ pdp_func <- function(i) {
           train = sample_frac(df_gen,0.1),
           chull = TRUE)
   
+  
 }
 
 list_rf_sim_ind_max_partial <- lapply(variables, pdp_func)
@@ -634,6 +635,7 @@ saveRDS(df_gen_pred,"df_gen_predjun24.RDS")
 testRes  <-  df_gen_pred |> select(starts_with("leach_")) |> corrplot::cor.mtest(conf.level = 0.95)
 
 df_gen_pred |> select(starts_with("leach_")) |> cor() |>
+  selec
   corrplot::corrplot( method = 'circle', 
                       type = 'lower', addCoef.col ='White',
                       #insig='blank', 
@@ -645,7 +647,7 @@ df_gen_pred |> select(starts_with("leach_")) |> cor() |>
 
 
 
-df_gen_pred <- readRDS("df_gen_predjun24")
+df_gen_pred <- readRDS("df_gen_predjun24.RDS")
 
 df_gen_pred |>
   mutate(clay_plot = fct_recode(
@@ -662,10 +664,12 @@ df_gen_pred |>
   #select(month, rf_pred, meancon,jbnr,harvest_year,clay_cat) |>
   pivot_longer(
     cols = c(
-      leach_a_obs,
-      leach_xbt_sim_ind,
-      leach_rf_full_ind,
-      leach_lin_ind
+      #leach_a_obs,
+      #leach_xbt_sim_ind_max,
+      #leach_rf_full_ind,
+      #leach_lin_ind
+      pred_xbt_sim_ind_max,
+      meancon
     ),
     #starts_with("leach_"),
     values_to = "Nleaching",
@@ -677,10 +681,10 @@ df_gen_pred |>
     fill = Measurement,
     col = Measurement
   )) +
-  geom_smooth(alpha = 0.4, se=FALSE #aes(linetype = Measurement)
+  geom_smooth(alpha = 0.8, se=FALSE, size=1.2 #aes(linetype = Measurement)
   ) +
   geom_boxplot(alpha = .1, aes(group = interaction(Measurement, month), 
-                               fill = Measurement)) +
+                               fill = Measurement, alpha = 0.5), alpha=0.5) +
   geom_point(alpha = 0.2, size = 0.1) +
   facet_grid(Winter_nles5 ~ clay_plot) +
   scale_x_continuous(breaks = seq(1, 12, 1)) +
@@ -689,47 +693,53 @@ df_gen_pred |>
   guides(linetype = FALSE,
          fill = FALSE,
          col = guide_legend("Estimation:")) +
-  ylab("N leaching (Kg N/ha)")+
+  ylab("N concentrations")+
   ggthemes::theme_hc()+
-  scale_color_gdocs()+
-  scale_fill_gdocs()+
-  theme(legend.position = "bottom", panel.background = NULL) 
+  scale_color_hc()+
+  scale_fill_hc()+
+  theme(legend.position = "bottom", panel.background = NULL,text =  element_text(size = 14)) 
 #theme_bw()
 
+df_gen_pred |> ggplot(aes(pred_xbt_sim_ind_max,
+                          meancon))+
+  geom_point()+geom_abline(slope = 1)
 
-
-log_den<- df_gen_pred |>
+log_den <- 
+  df_gen_pred |>
   pivot_longer(
     cols = c(
-      leach_a_obs,
-      leach_xbt_sim_ind,
-      leach_rf_full_ind,
-      leach_lin_ind
+      #leach_a_obs,
+      #leach_xbt_sim_ind,
+      #leach_rf_full_ind,
+      #leach_lin_ind
+      pred_xbt_sim_ind_max,
+      meancon
     ),
-    values_to = "Nleaching",
+    values_to = "est",
     names_to = "Measurement"
   ) |>
   ggplot(aes(
-    x = log(Nleaching) ,
+    x = log(est) ,
     fill = Measurement,
     col = Measurement
   )) +
-  geom_density(stat="density", position="identity", alpha=0.1)+
+  geom_density(stat="density", position="identity", alpha=0.2)+
   #geom_step(aes(y = ..y..), stat = "ecdf") +
   #scale_x_continuous(breaks = c(-2.5, 5.5)) +
   #scale_x_continuous(limits = c(0,75))+
   theme_hc() +
   theme(legend.position = "bottom", 
-        panel.background = NULL#,
+        panel.background = NULL,
+        text=element_text(size=14)#,
         #panel.border =NULL
   ) +
   guides(linetype = FALSE,
          fill = FALSE,
          col = guide_legend("Estimation:")) +
-  #ylab("Percentile")+
+  xlab("")+
   ylab("Frequency")+
-  scale_color_gdocs()+
-  scale_fill_gdocs()
+  scale_color_hc()+
+  scale_fill_hc()
 
 ggarrange(log_ecdf, ecdf, log_den, den, ncol=2, nrow=2, #, 
           common.legend = T,  legend="bottom")
@@ -787,7 +797,7 @@ fitt_xgb_max <- readRDS("fitt_xgb_max.RDS")
 
 lookup_01_xbt <- expand.grid(month=seq(1,12,1),
                              Main_nles5=levels(df_gen_simp_ind_max$Main_nles5),
-                             Winter_nles5=levels(df_gen_simp_ind_max$Winter_nles5),
+                             Winter_nles5=c("1", "2", "3", "4", "5", "6", "8", "9"),
                              clay_cat=levels(df_gen_simp_ind_max$clay_cat),
                              AirTemp_ave_month=seq(-1,25,1),
                              Precip_cumsumhy=c(seq(10,550,20), seq(600,1400,50)),
