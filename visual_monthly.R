@@ -377,59 +377,77 @@ table(df_gen_plot_month$month, df_gen_plot_month$harvest_year)
 
 conc_month <- df_gen_plot_month |> 
   ggplot(aes(x=month_hy,y=meancon, group=Winter_nles5))+
-  geom_point(size=0.6, aes(color  = Winter_nles5))+
+  geom_point(size=0.1, aes(color  = Winter_nles5))+
   geom_smooth(aes(group = Winter_nles5, color = Winter_nles5),
               #color="#01a2d9", 
               alpha=0.1, linewidth=0.8
               )+
   scale_color_manual(values = c("#01a2d9", "#014B55"))+
+  scale_y_continuous("Nitrate Concentration \n(mg/L)")+
   #facet_grid(~Winter_nles5)+
-  scale_y_continuous(name = "Monthly nitrate conccentration (mg/L)")+
-  scale_x_discrete(name = "")
+  theme_hc()+
+  scale_x_continuous(name = "", breaks = 1:12,
+                     labels = c("Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec", 
+                                "Jan", "Feb", "Mar")) 
 
 perc_month <- df_gen_plmonth_nameperc_month <- df_gen_plot_month |>
   ggplot(aes(x=month_hy,y=as.numeric(afstro_sum_month), 
              group=Winter_nles5))+
-  geom_point(size=0.6, aes(color  = Winter_nles5))+
+  geom_point(size=0.1, aes(color  = Winter_nles5))+
   geom_smooth(aes(group = Winter_nles5, color=Winter_nles5), 
               alpha=0.1, linewidth=0.8
               )+
-  scale_y_continuous(name="Monthly percolation (mm)", limits = c(10,100))+
+  scale_y_continuous(name= "Percolation \n(mm)", limits = c(10,100))+
   scale_color_manual(values = c("#01a2d9", "#014B55"))+#values = c("#0B7100", "#011700"))+
   #facet_grid(~Winter_nles5)+
-  scale_x_discrete(name = "")
+  theme_hc()+
+  scale_x_continuous(name = "", breaks = 1:12,
+                     labels = c("Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec", 
+                                "Jan", "Feb", "Mar")) 
 
 
 leached_month <- df_gen_plot_month |>
   ggplot(aes(x=month_hy,y=as.numeric(meancon*afstro_sum_month/100)))+
-  geom_point(size=0.6, aes(color  = Winter_nles5))+
+  geom_point(size=0.1, aes(color  = Winter_nles5))+
   geom_smooth(aes(group = Winter_nles5, color=Winter_nles5), 
               alpha=0.1, linewidth=0.8
   )+
   scale_color_manual(values = c("#01a2d9", "#014B55")) + # "#922CC6","#260339"))+
-  scale_y_continuous(name="Monthly nitrate leaching Kg/ha")+
+  scale_y_continuous(name="Nitrate leaching \n(kg/ha)")+
   #facet_grid(~Winter_nles5)+
-  scale_x_continuous(name = "month", breaks = 1:12,
+  theme_hc()+
+  theme(axis.text.x = element_text(angle = 40, hjust = 0.5))+
+  scale_x_continuous(name = "Month", breaks = 1:12,
                    labels = c("Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec", 
                               "Jan", "Feb", "Mar")) 
 
 ### Figure 2 ----
-month_exp <- ggarrange(conc_month+rremove("x.text")+
-                         labs(color = "Crop sequence"), 
-                       perc_month+rremove("x.text")+
-                         labs(color = "Crop sequence"), 
-                       leached_month+
-                         labs(color = "Crop sequence"), 
-                       ncol=1, 
-                       common.legend = TRUE
-                       )+
-  scale_x_discrete(name = "month") #|> 
+month_exp <- ggarrange(
+  conc_month +rremove("x.text")+
+                         labs(color = "Crop Sequence")+
+                         theme(legend.position = "bottom")+
+                         guides(color = guide_legend(title.position = "top",
+                                                     nrow = 2)) , 
+  perc_month + rremove("x.text")+
+                         labs(color = "Crop Sequence")+
+                         theme(legend.position = "bottom")+
+                         guides(color = guide_legend(title.position = "top",
+                                                     nrow = 2)) , 
+  leached_month +
+                        labs(color = "Crop Sequence")+
+                        theme(legend.position = "bottom")+
+                        guides(color = guide_legend(title.position = "top",
+                              nrow = 2)), 
+  ncol = 1, 
+  common.legend = TRUE,
+  legend = "bottom", font.label=list(size=11)
+  )#|> 
 
 ggsave(
   plot=month_exp,
   "C:/Users/au710823/OneDrive - Aarhus universitet/NLESS2022Fran/NLESSdata/Nudvask/Nudvask/Nret24_FGK/Nret24_Nitrate/Figures/fig2_exp.jpeg",
-  width = 180,
-  height = 240,
+  width = 90,
+  height = 170,
   units = "mm"
 )
 
@@ -504,54 +522,6 @@ df_gen |> select(afstro_cumsumhy,
 
   df_gen_pred <- readRDS("df_gen_predjun24.RDS")
   
-  df_gen_pred |>
-    mutate(clay_plot = fct_recode(
-      clay_cat,
-      low = "low",
-      'midle-high' = "middle",
-      'midle-high' = "high"
-    )) |>
-    filter(Winter_nles5 == c("1", "4")) |>
-    mutate(Winter_nles5=dplyr::recode_factor(Winter_nles5,
-                                             `1`="Winter cereal", 
-                                             `4`="Cover crop" ) )|> 
-    #filter(Main_nles5==1 & Winter_nles5 == 4 & harvest_year== c(1998,1999,2008))|>
-    #select(month, rf_pred, meancon,jbnr,harvest_year,clay_cat) |>
-    pivot_longer(
-      cols = c(
-        leach_a_obs,
-        leach_xbt_sim_ind,
-        leach_rf_full_ind,
-        leach_lin_ind
-      ),
-      #starts_with("leach_"),
-      values_to = "Nleaching",
-      names_to = "Measurement"
-    ) |>
-    ggplot(aes(
-      x = month,
-      y = Nleaching,
-      fill = Measurement,
-      col = Measurement
-    )) +
-    geom_smooth(alpha = 0.4, se=FALSE #aes(linetype = Measurement)
-    ) +
-    geom_boxplot(alpha = .1, aes(group = interaction(Measurement, month), 
-                                 fill = Measurement)) +
-    geom_point(alpha = 0.2, size = 0.1) +
-    facet_grid(Winter_nles5 ~ clay_plot) +
-    scale_x_continuous(breaks = seq(1, 12, 1)) +
-    scale_y_continuous(limits = c(0, 30)) +
-    
-    guides(linetype = FALSE,
-           fill = FALSE,
-           col = guide_legend("Estimation:")) +
-    ylab("N leaching (Kg N/ha)")+
-    ggthemes::theme_hc()+
-    scale_color_gdocs()+
-    scale_fill_gdocs()+
-    theme(legend.position = "bottom", panel.background = NULL) 
-  #theme_bw()
 
 ### Figure 3 ----
   
@@ -692,19 +662,197 @@ plot(fitt_xgb_max)
               col="white") + 
     coord_flip()+
     theme_minimal()+
-    theme(legend.position = "bottom")+
+    theme(legend.position = "bottom",
+          legend.key.width=unit(.1, "cm"))+
     scale_fill_ptol(name="")+
     labs(
       x='',
       y="Predictor Contribution (%)")+
     guides(fill = guide_legend(nrow = 1, byrow = TRUE, 
-                               legend.text.position = "right", 
+                               #override.aes = list(size = -20),
+                               #legend.text.position = "right",
+                               label.position = "bottom",
                                reverse = TRUE))
   
   colorblindr::cvd_grid(contr_plot)
   
 # Marginal effects ----
+  library(pdp)
+  library(caret)
+  library(purrr)
+  library(tidyverse)
+  library(ggthemes)
   
-# see marginal effects script 
+# the model and data 
+  fitt_xgb_max <- readRDS("fitt_xgb_max.RDS")
+
+  train_uden7 <- df_gen |> dplyr::filter(!Winter_nles5 == "7")
+  
+  levels(train_uden7$Winter_nles5)
+  
+  lookup_frac <- expand.grid(month=seq(1,12,1),
+                             Main_nles5=levels(train_uden7$Main_nles5),
+                             Winter_nles5=c("1", "2", "3", "4", "5", "6", "8", "9"),
+                             clay_cat=levels(train_uden7$clay_cat),
+                             AirTemp_ave_month=seq(-1,25,1),
+                             Precip_cumsumhy=c(seq(10,550,20), seq(600,1400,50)),
+                             N_mineral_spring=seq(0,320,20)
+  ) |> sample_n(5000)  
+  
+  # Marginal on continuous
+## month ----
+  # monthly and clay
+  # Create the partial dependence object
+  pdp_obj_mvsclay <- pdp::partial(fitt_xgb_max, 
+                                  pred.var = c("month", "clay_cat"), 
+                                  grid.resolution = 90, 
+                                  train = lookup_frac) 
+  
+  # Plot the partial dependence
+  pdp_month <- pdp_obj_mvsclay |> #mutate(pred_conc = exp(yhat)) |> 
+    mutate(
+      month_hy = ifelse(month < 4, month + 12, month))|> 
+    ggplot(aes(x = month_hy, y = yhat, col= clay_cat)) +
+    geom_smooth()+
+    geom_point(size=.1)+
+    scale_x_continuous(name = "Month", breaks = 4:15,
+                       labels = c("A", "M", "J", "J", "A", "S", "O", "N", "D", 
+                                  "J", "F", "M"))+
+    ylab(""
+      #expression(log(NO[3]^"-"))
+      )+
+    xlab("Month")+
+    theme_hc()+
+    theme(#axis.text.x = element_text(angle = 50, hjust = 0.5),
+          axis.text.y=element_blank())+
+    scale_color_ordinal(name="Soil clay", labels = c("low", 
+                                                "middle","high"))  
+
+## N mineral spring ----
+  # Create the partial dependence object
+  pdp_obj_nspr <- pdp::partial(fitt_xgb_max, 
+                               pred.var = c("N_mineral_spring","clay_cat"), 
+                               grid.resolution = 90, 
+                               train = lookup_frac) 
+  
+  # Plot the partial dependence
+  pdpN <- pdp_obj_nspr |> #mutate(pred_conc = exp(yhat)) |> 
+    ggplot(aes(x = N_mineral_spring, y = yhat, col=clay_cat)) +
+    geom_point(size=.1)+
+    geom_smooth()+
+    scale_x_continuous(limits = c(0, 280))+
+    ylab(expression(log(NO[3]^"-")))+
+    xlab("Mineral N applied in spring")+
+    theme_hc()+
+    scale_color_ordinal(name="Soil clay", labels = c("low", 
+                                                "middle","high"))
+  ## Temp ----
+  pdp_obj_temp <- pdp::partial(fitt_xgb_max, 
+                               pred.var = c("AirTemp_ave_month","clay_cat"), 
+                               grid.resolution = 90, 
+                               train = lookup_frac) 
+  
+
+  pdp_temp <- pdp_obj_temp |> #mutate(pred_conc = exp(yhat)) |> 
+    ggplot(aes(x = AirTemp_ave_month, y = yhat, col=clay_cat)) +
+    geom_point(size=.1)+
+    geom_smooth()+
+    scale_x_continuous(limits = c(0, 22))+
+    ylab(expression(log(NO[3]^"-")))+
+    xlab("Monthly daily Temp.")+
+    theme_hc()+
+    scale_color_ordinal(name="Soil clay", labels = c("low", 
+                                                "middle","high"))
   
   
+## Pp ----
+  pdp_obj_pp <- pdp::partial(fitt_xgb_max, 
+                             pred.var = c("Precip_cumsumhy","clay_cat"), 
+                             grid.resolution = 90, 
+                             train = lookup_frac) 
+  
+  # Plot the partial dependence
+  pdp_pp <- pdp_obj_pp |> #mutate(pred_conc = exp(yhat)) |> 
+    ggplot(aes(x = Precip_cumsumhy, y = yhat, col=clay_cat)) +
+    geom_point(size=.1)+
+    geom_smooth()+
+    ylab(""#expression(log(NO[3]^"-"))
+         )+
+    xlab("Cumulative Ppt.")+
+    theme_hc()+
+    theme(axis.text.y=element_blank())+
+    scale_color_ordinal(name="Soil clay", labels = c("low", 
+                                                "middle","high"))    
+
+## Figure 4 ----  
+
+  ggsave(
+    plot=  
+      ggarrange(contr_plot+ theme(legend.key.height = unit(3, 'mm')), 
+            ggarrange(pdp_temp+scale_y_continuous(limits =c(1.4,2.4)),
+                      pdp_pp+scale_y_continuous(limits = c(1.4,2.4)),
+                      pdpN+scale_y_continuous(limits = c(1.4,2.4)),
+                      pdp_month+scale_y_continuous(limits = c(1.4,2.4)),
+                      #label.y=0,
+              ncol = 2,nrow = 2,
+              common.legend = T,  
+                      legend="bottom"),
+            ncol=1,
+            heights=c(1.3,4),
+            font.label = list(size = 10))
+    ,
+    "C:/Users/au710823/OneDrive - Aarhus universitet/NLESS2022Fran/NLESSdata/Nudvask/Nudvask/Nret24_FGK/Nret24_Nitrate/Figures/fig4_marginal.jpeg",
+    width = 180,
+    height = 170,
+    units = "mm")
+    
+  # 4.3.3	Nitrate concentration seasonal dynamics ----
+  
+  df_gen_pred |>
+    mutate(clay_plot = fct_recode(
+      clay_cat,
+      low = "low",
+      'midle-high' = "middle",
+      'midle-high' = "high"
+    )) |>
+    filter(Winter_nles5 == c("1", "4")) |>
+    mutate(Winter_nles5=dplyr::recode_factor(Winter_nles5,
+                                             `1`="Winter cereal", 
+                                             `4`="Cover crop" ) )|> 
+    #filter(Main_nles5==1 & Winter_nles5 == 4 & harvest_year== c(1998,1999,2008))|>
+    #select(month, rf_pred, meancon,jbnr,harvest_year,clay_cat) |>
+    pivot_longer(
+      cols = c(
+        leach_a_obs,
+        leach_xbt_sim_ind,
+        #leach_rf_full_ind,
+       # leach_lin_ind
+      ),
+      #starts_with("leach_"),
+      values_to = "Nleaching",
+      names_to = "Measurement"
+    ) |>
+    ggplot(aes(
+      x = month,
+      y = Nleaching,
+      fill = Measurement,
+      col = Measurement
+    )) +
+    geom_smooth(alpha = 0.4, se=FALSE #aes(linetype = Measurement)
+    ) +
+    geom_boxplot(alpha = .1, aes(group = interaction(Measurement, month), 
+                                 fill = Measurement)) +
+    geom_point(alpha = 0.2, size = 0.1) +
+    facet_grid(Winter_nles5 ~ clay_plot) +
+    scale_x_continuous(breaks = seq(1, 12, 1)) +
+    scale_y_continuous(limits = c(0, 30)) +
+    
+    guides(linetype = FALSE,
+           fill = FALSE,
+           col = guide_legend("Estimation:")) +
+    ylab("N leaching (Kg N/ha)")+
+    ggthemes::theme_hc()+
+    scale_color_gdocs()+
+    scale_fill_gdocs()+
+    theme(legend.position = "bottom", panel.background = NULL) 
+  #theme_bw()
