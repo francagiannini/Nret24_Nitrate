@@ -162,8 +162,8 @@ fil_df_m_imp <- df_m_imp |> dplyr::filter(ident==2702)
 
 # feature selection ----
 
-# df_m_imp <- readRDS(
-#   "C:/Users/au710823/OneDrive - Aarhus universitet/NLESS2022Fran/NLESSdata/Nudvask/Nudvask/df_m_imp.RDS")
+df_m_imp <- readRDS(
+  "C:/Users/au710823/OneDrive - Aarhus universitet/NLESS2022Fran/NLESSdata/Nudvask/Nudvask/df_m_imp.RDS")
 
 df_gen <-
   df_m_imp |>

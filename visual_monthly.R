@@ -40,7 +40,7 @@ site_yr_plot <-   merge(site_yr, df_gen |> select(site_eng,Y) |> unique(),
   ) +
   geom_text(aes(label = ifelse(Freq == 0, paste(""), paste(Freq))), 
             color = "black", size = 2) +
-  scale_x_discrete(name = "Harvest year") +
+  scale_x_discrete(name = "Hydrological year") +
   scale_y_discrete(name = "Experimental Sites") +
   theme_minimal()+
   theme(axis.text.x = element_text(
@@ -66,7 +66,7 @@ hist_conc <- df_gen |>
   #geom_histogram(aes(log))+
   #geom_density(aes(y = rel_freq), color = "red", linetype = "dashed") +
   scale_y_continuous(name = "Absolute frequency") +
-  scale_x_continuous(name = "Monthly nitrate concentration (mg/L)") +
+  scale_x_continuous(name =  expression(Monthly~NO[3]^"-"~N (mg/L))) +
   #labs(title = "Histogram with Relative Frequency and Density Curve") +
   theme_minimal()
 
@@ -155,15 +155,15 @@ point <- ggplot(dk) +
   ) +
   scale_size_continuous(range = c(1, 10), 
                         guide = "legend", 
-                        breaks = c(50, 500, 5000 ,10000)) +
+                        breaks = c(50, 500, 5000 ,12000)) +
   scale_color_gradient(
     low = "#000407",
     high = "#01a2d9",
-    breaks =  c(50, 500, 5000 ,10000)# Match breaks with size
+    breaks =  c(50, 500, 5000 ,12000)# Match breaks with size
   ) +
   guides(
-    size = guide_legend(title = "N"),
-    color = guide_legend(title = "N")  # Same title for color and size
+    size = guide_legend(title = "n"),
+    color = guide_legend(title = "n")  # Same title for color and size
   ) +
   labs(x = "Longitude", y = "Latitude")
 
@@ -309,7 +309,7 @@ df_gen_plot_month <-
 
 
 
-table(df_gen_plot_month$month, df_gen_plot_month$harvest_year)
+table(df_gen_plot_month$ident, df_gen_plot_month$harvest_year)
 
 # library(mgcv)
 # library(tidygam)
@@ -380,7 +380,7 @@ conc_month <- df_gen_plot_month |>
   geom_point(size=0.1, aes(color  = Winter_nles5))+
   geom_smooth(aes(group = Winter_nles5, color = Winter_nles5),
               #color="#01a2d9", 
-              alpha=0.1, linewidth=0.8
+              alpha=0.1, linewidth=0.8, se=FALSE
               )+
   scale_color_manual(values = c("#01a2d9", "#014B55"))+
   scale_y_continuous("Nitrate Concentration \n(mg/L)")+
@@ -395,7 +395,7 @@ perc_month <- df_gen_plmonth_nameperc_month <- df_gen_plot_month |>
              group=Winter_nles5))+
   geom_point(size=0.1, aes(color  = Winter_nles5))+
   geom_smooth(aes(group = Winter_nles5, color=Winter_nles5), 
-              alpha=0.1, linewidth=0.8
+              alpha=0.1, linewidth=0.8, se=FALSE
               )+
   scale_y_continuous(name= "Percolation \n(mm)", limits = c(10,100))+
   scale_color_manual(values = c("#01a2d9", "#014B55"))+#values = c("#0B7100", "#011700"))+
@@ -410,8 +410,8 @@ leached_month <- df_gen_plot_month |>
   ggplot(aes(x=month_hy,y=as.numeric(meancon*afstro_sum_month/100)))+
   geom_point(size=0.1, aes(color  = Winter_nles5))+
   geom_smooth(aes(group = Winter_nles5, color=Winter_nles5), 
-              alpha=0.1, linewidth=0.8
-  )+
+              alpha=0.1, linewidth=0.8, se=FALSE
+              )+
   scale_color_manual(values = c("#01a2d9", "#014B55")) + # "#922CC6","#260339"))+
   scale_y_continuous(name="Nitrate leaching \n(kg/ha)")+
   #facet_grid(~Winter_nles5)+
@@ -442,6 +442,7 @@ month_exp <- ggarrange(
   common.legend = TRUE,
   legend = "bottom", font.label=list(size=11)
   )#|> 
+
 
 ggsave(
   plot=month_exp,
@@ -557,7 +558,7 @@ df_gen |> select(afstro_cumsumhy,
     guides(linetype = FALSE,
            fill = guide_legend(""),
            col = guide_legend("")) +
-    xlab(expression(log(NO[3]^"-")))+
+    xlab(expression(NO[3]^"-"~N))+
     ylab("Frequency")+
     scale_color_hc(labels = c("Observed", "Predicted"))+
     scale_fill_hc(labels = c("Observed", "Predicted"))
@@ -586,27 +587,96 @@ df_gen |> select(afstro_cumsumhy,
     #geom_step(aes(y = ..y..), stat = "ecdf") +
     #scale_x_continuous(breaks = c(-2.5, 5.5)) +
     scale_x_continuous(limits = c(0,120))+
-    theme(legend.position = "bottom", 
+    theme(legend.position = "bottom",
           panel.background = NULL,
-          text=#element_text(size=12),
+          #text=element_text(size=11),
           #panel.border =NULL
           plot.margin=margin(t = .5, r = .5, b = .5, l = .5, unit = "cm")
-    ) + 
-    theme_hc() +
+    ) +theme_hc() +
     guides(linetype = FALSE,
            fill = guide_legend(""),
            col = guide_legend("")) +
-    xlab(expression(NO[3]^"-"))+
+    xlab(expression(NO[3]^"-"~N))+
     ylab("Frequency")+
     scale_color_hc(labels = c("Observed", "Predicted"))+
     scale_fill_hc(labels = c("Observed", "Predicted"))
   
+  # 4.3.3	Nitrate concentration seasonal dynamics ----
+  
+  seson_predvsobs <-   
+  df_gen_pred |>
+    mutate(
+      clay_plot = fct_recode(
+        clay_cat,
+        low = "low",
+        'midle-high' = "middle",
+        'midle-high' = "high"
+      ),
+    month_hy = ifelse(month < 4, month + 12, month)) |>
+    filter(Winter_nles5 == c("4","1") & Main_nles5 =="1"#"2",
+           ) |>
+    mutate(Winter_nles5=dplyr::recode_factor(Winter_nles5,
+                                             #`2`="Bare soil", 
+                                             `4`="Cover crop",
+                                             `1` = "Winter Ceral")
+           )|> 
+    pivot_longer(
+      cols = c(
+        leach_a_obs,
+        leach_xbt_sim_ind,
+        #leach_rf_full_ind,
+        # leach_lin_ind
+      ),
+      #starts_with("leach_"),
+      values_to = "Nleaching",
+      names_to = "Measurement"
+    ) |>
+    ggplot(aes(
+      x = month_hy,
+      y = Nleaching,
+      fill = Measurement,
+      col = Measurement
+    )) +
+    geom_smooth(alpha = 0.4, se=FALSE #aes(linetype = Measurement)
+    ) +
+    geom_boxplot(alpha = .1, aes(group = interaction(Measurement, month_hy), 
+                                 fill = Measurement)) +
+    geom_point(alpha = 0.1, size = 0.1) +
+    facet_grid(Winter_nles5 ~ clay_plot #, 
+               #labeller=label_both
+               ) +
+    ##scale_x_continuous(breaks = seq(1, 12, 1)) +
+    scale_y_continuous(limits = c(0, 30)) +
+    guides(linetype = FALSE,
+           fill = FALSE,
+           col = guide_legend("Estimation from:")) +
+    ylab("Nitrate leaching \n(kg/ha)")+
+    theme_hc()+
+    scale_color_hc(labels = c("Observed concentrations", "Predicted concentrations"))+
+    scale_fill_hc(labels = c("Observed concentrations", "Predicted concentrations"))+
+    theme(legend.position = "bottom", 
+          panel.background = NULL,
+          axis.text.x = element_text(angle = 40, hjust = 0.5))+
+    scale_x_continuous(name = "Month", breaks = 4:15,
+                       labels = c("Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+                                  "Jan", "Feb", "Mar"))
+  
+  
   ggsave(
-    plot= ggarrange(log_den, ident_den, ncol=1, #, 
-            common.legend = T,  legend="bottom"),
+    plot= ggarrange(
+              ggarrange(log_den, ident_den, ncol=2, 
+                        common.legend = TRUE,
+                        legend= "none"), 
+              gridExtra::grid.arrange(seson_predvsobs,top='Soil clay', 
+                                      right='Winter Crop') 
+  , 
+          nrow = 2, 
+          heights = c(1,3),
+          font.label = list(size = 10)
+          ),
     "C:/Users/au710823/OneDrive - Aarhus universitet/NLESS2022Fran/NLESSdata/Nudvask/Nudvask/Nret24_FGK/Nret24_Nitrate/Figures/fig3_density.jpeg",
-    width = 90,
-    height = 110,
+    width = 180,
+    height = 170,
     units = "mm"
   )           
   
@@ -719,7 +789,7 @@ plot(fitt_xgb_max)
                        labels = c("A", "M", "J", "J", "A", "S", "O", "N", "D", 
                                   "J", "F", "M"))+
     ylab(""
-      #expression(log(NO[3]^"-"))
+      #expression(log(NO[3]^"-"~N))
       )+
     xlab("Month")+
     theme_hc()+
@@ -741,7 +811,7 @@ plot(fitt_xgb_max)
     geom_point(size=.1)+
     geom_smooth()+
     scale_x_continuous(limits = c(0, 280))+
-    ylab(expression(log(NO[3]^"-")))+
+    ylab(expression(log(NO[3]^"-"~N)))+
     xlab("Mineral N applied in spring")+
     theme_hc()+
     scale_color_ordinal(name="Soil clay", labels = c("low", 
@@ -758,7 +828,7 @@ plot(fitt_xgb_max)
     geom_point(size=.1)+
     geom_smooth()+
     scale_x_continuous(limits = c(0, 22))+
-    ylab(expression(log(NO[3]^"-")))+
+    ylab(expression(log(NO[3]^"-"~N)))+
     xlab("Monthly daily Temp.")+
     theme_hc()+
     scale_color_ordinal(name="Soil clay", labels = c("low", 
@@ -805,54 +875,72 @@ plot(fitt_xgb_max)
     width = 180,
     height = 170,
     units = "mm")
-    
-  # 4.3.3	Nitrate concentration seasonal dynamics ----
+ 
+  # Crop sequence and seasonal predicted distribution ------     
+
+  # monthly and main_crop and wintercrop
+  # Create the partial dependence object
+  pdp_obj_crop_rot <- pdp::partial(fitt_xgb_max, 
+                                   pred.var = c("month","Main_nles5", "Winter_nles5"), 
+                                   grid.resolution = 90, 
+                                   train = lookup_frac) 
   
-  df_gen_pred |>
-    mutate(clay_plot = fct_recode(
-      clay_cat,
-      low = "low",
-      'midle-high' = "middle",
-      'midle-high' = "high"
-    )) |>
-    filter(Winter_nles5 == c("1", "4")) |>
-    mutate(Winter_nles5=dplyr::recode_factor(Winter_nles5,
-                                             `1`="Winter cereal", 
-                                             `4`="Cover crop" ) )|> 
-    #filter(Main_nles5==1 & Winter_nles5 == 4 & harvest_year== c(1998,1999,2008))|>
-    #select(month, rf_pred, meancon,jbnr,harvest_year,clay_cat) |>
-    pivot_longer(
-      cols = c(
-        leach_a_obs,
-        leach_xbt_sim_ind,
-        #leach_rf_full_ind,
-       # leach_lin_ind
-      ),
-      #starts_with("leach_"),
-      values_to = "Nleaching",
-      names_to = "Measurement"
-    ) |>
-    ggplot(aes(
-      x = month,
-      y = Nleaching,
-      fill = Measurement,
-      col = Measurement
-    )) +
-    geom_smooth(alpha = 0.4, se=FALSE #aes(linetype = Measurement)
-    ) +
-    geom_boxplot(alpha = .1, aes(group = interaction(Measurement, month), 
-                                 fill = Measurement)) +
-    geom_point(alpha = 0.2, size = 0.1) +
-    facet_grid(Winter_nles5 ~ clay_plot) +
-    scale_x_continuous(breaks = seq(1, 12, 1)) +
-    scale_y_continuous(limits = c(0, 30)) +
-    
-    guides(linetype = FALSE,
-           fill = FALSE,
-           col = guide_legend("Estimation:")) +
-    ylab("N leaching (Kg N/ha)")+
-    ggthemes::theme_hc()+
-    scale_color_gdocs()+
-    scale_fill_gdocs()+
-    theme(legend.position = "bottom", panel.background = NULL) 
-  #theme_bw()
+  # Plot the partial dependence
+  pdpcrop_rotsup <- 
+    pdp_obj_crop_rot |> mutate(pred_conc = exp(yhat)) |> 
+    mutate(
+      month_hy = ifelse(month < 4, month + 12, month), 
+      MainCrop = recode_factor(Main_nles5,
+                               '1'="Winter cereal",
+                               '2'="Spring cereal",
+                               '3'=	'Grain-legume mixtures',
+                               '4'= 'Grass or grass-clover',
+                               '5'= 'Grass for seed',
+                               '7'= 'Set-aside',
+                               '6'= 'Set-aside',
+                               '8'= 'Sugar beet, fodder beet',
+                               '9'= 'Silage maize and potato',
+                               '10'= 'Winter oilseed rape',
+                               '11'= 'Winter cereal after grass',
+                               '12' = 'Maize after grass',
+                               '13'= 'Spring cereal after grass',
+                               '14'= 'Grain legumes and spring oilseed rape'),
+      WinterCrop = recode_factor(Winter_nles5,
+                                 '1'= 'Winter cereal (excluding winter rape)',
+                                 '2' = 'Bare soil',
+                                 '3'= 'Autumn cultivation',
+                                 '4'= 'Cover crops, undersown grass and set-aside',
+                                 '5' = 'Weeds and volunteers',
+                                 '6'= 'Grass and grass-clover, winter rape',
+                                 '8'='Winter cereal after grass',
+                                 '9' = 'Spring cereal after grass')
+    ) |> 
+    ggplot(aes(x = month_hy, y = pred_conc, col= WinterCrop)) +
+    geom_smooth()+
+    facet_wrap("MainCrop", nrow = 4,)+
+    scale_color_ptol(name= 'Winter \n Crop')+
+    scale_x_continuous(name = "month", breaks = 4:15,
+                       labels = c("A", "M", "J", "J", "A", "S", "O", "N", "D", 
+                                  "J", "F", "M"))+
+    theme(legend.position = "rigth",
+          legend.key.width=unit(3, "mm"),
+          legend.key.height=unit(3, "mm"))+
+    theme_hc()+
+    ylab(expression(NO[3]^"-"~N))+
+    xlab("")+
+    guides(color = guide_legend(nrow = 3, byrow = TRUE, 
+                               #override.aes = list(size = -20),
+                               #legend.text.position = "right",
+                               #label.position = "bottom",
+                               #reverse = TRUE
+                               )
+           )
+  
+  ggsave(
+    plot= pdpcrop_rotsup,
+    "C:/Users/au710823/OneDrive - Aarhus universitet/NLESS2022Fran/NLESSdata/Nudvask/Nudvask/Nret24_FGK/Nret24_Nitrate/Figures/supp_margcropseq.jpeg",
+    width = 180,
+    height = 170,
+    units = "mm"
+  )      
+  
